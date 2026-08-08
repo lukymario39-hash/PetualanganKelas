@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Petualangan Kelas</title>
+<title>Petualangan Kelas Pak Guru</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -293,13 +293,29 @@
 
   body.role-siswa .guru-only{display:none !important;}
   body.role-siswa .classname-row input{pointer-events:none;border-bottom-style:solid;}
+
+  /* Start gate */
+  .start-gate{text-align:center;padding:44px 20px;margin-top:20px;}
+  .start-gate .big-icon{font-size:44px;margin-bottom:6px;}
+  .start-gate h2{font-size:15px;color:var(--gold);margin:10px 0;}
+  .start-gate p{color:var(--ink-dim);font-size:15px;max-width:420px;margin:0 auto;line-height:1.5;}
+  .start-gate button{margin-top:18px;font-size:18px;padding:11px 26px;}
+
+  /* Mode bantuan */
+  .help-toggle{font-size:12px;padding:4px 9px;}
+  .help-toggle.on{border-color:var(--xp);color:#82d382;}
+  .hint-box{
+    background:#16311a;border:1px solid var(--xp);border-radius:5px;
+    padding:10px 12px;font-size:14px;color:#c7e8c7;margin-top:8px;display:none;
+  }
+  .hint-box.show{display:block;}
 </style>
 </head>
 <body>
 
 <div id="setupOverlay" class="setup-card hidden">
-  <h2 class="pixel" style="font-size:14px;">HUBUNGKAN KE GOOGLE SHEETS</h2>
-  <p>Tempel URL Web App dari Google Apps Script Anda (hasil Deploy &gt; New deployment &gt; Web app) di bawah ini. Data quest, siswa, dan XP akan tersimpan di Google Sheet Anda.</p>
+  <h2 class="pixel" style="font-size:14px;">HUBUNGKAN KE DATABASE</h2>
+  <p>Tempel URL Web App dari Google Apps Script Anda (hasil Deploy &gt; New deployment &gt; Web app) di bawah ini. Data quest, siswa, dan XP akan tersimpan otomatis ke Database Anda.</p>
   <div class="form-stack" style="margin-top:14px;">
     <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec" />
     <button class="primary" id="saveApiUrlBtn">Simpan &amp; Sambungkan</button>
@@ -312,9 +328,10 @@
   <div class="hero">
     <div class="hero-inner">
       <div class="eyebrow pixel">BELAJAR &middot; BERKARYA &middot; MENGINSPIRASI</div>
-      <h1 class="pixel">PETUALANGAN KELAS</h1>
+      <h1 class="pixel">PETUALANGAN KELAS PAK GURU</h1>
       <div class="classname-row">
         Kelas: <input type="text" id="classNameInput" placeholder="Nama kelas Anda" />
+        <select id="classNameHistorySelect" class="guru-only" style="width:auto;min-width:150px;"></select>
       </div>
       <div class="hero-quote">"Ilmu adalah petualangan tanpa akhir." &mdash; setiap siswa adalah pahlawan.</div>
     </div>
@@ -322,12 +339,21 @@
 
   <div class="top-actions">
     <span id="roleLabel" style="font-size:13px;color:var(--ink-dim);align-self:center;">Tampilan: Siswa</span>
-    <button class="ghost guru-only" id="changeApiBtn">Ganti sambungan Sheets</button>
+    <button class="ghost guru-only" id="changeApiBtn">Ganti sambungan Database</button>
     <button class="ghost" id="refreshBtn">Muat ulang data</button>
     <button class="ghost" id="toggleRoleBtn">Masuk sebagai Guru</button>
   </div>
 
   <div class="wrap">
+
+    <div id="startGate" class="panel start-gate">
+      <div class="big-icon">&#127918;</div>
+      <h2 class="pixel">SIAP MEMULAI PETUALANGAN?</h2>
+      <p>Daftar quest dan tantangan akan muncul setelah kamu menekan tombol di bawah. Ayo mulai!</p>
+      <button class="primary" id="startBtn">&#9654; Mulai Petualangan</button>
+    </div>
+
+    <div id="playArea" class="hidden">
     <div class="grid">
 
       <!-- GURU PROFILE -->
@@ -336,7 +362,7 @@
         <div class="guru-head">
           <div class="guru-avatar">&#129497;</div>
           <div>
-            <div class="guru-name" id="guruName">Pak/Bu Guru</div>
+            <div class="guru-name" id="guruName">Pak Guru</div>
             <div class="guru-lv pixel" id="guruLevel">LV. 1</div>
           </div>
         </div>
@@ -377,6 +403,7 @@
           </div>
           <textarea id="questQuestion" placeholder="Pertanyaan tantangan (opsional), mis. Berapa hasil dari 3/4 + 1/4 ?"></textarea>
           <input type="text" id="questAnswer" placeholder="Jawaban benar (opsional, tidak terlihat siswa)" />
+          <input type="text" id="questHint" placeholder="Petunjuk bantuan (opsional), mis. Samakan dulu penyebutnya" />
           <button class="primary" id="addQuestBtn">+ Tambah Quest</button>
         </div>
 
@@ -407,7 +434,12 @@
       <div id="regionDesc" class="region-desc"></div>
     </div>
 
-    <div class="save-hint">Data tersimpan langsung di Google Sheets Anda &mdash; bisa dibuka dari perangkat mana saja.</div>
+    <div class="save-hint">Data tersimpan langsung di Database Anda &mdash; bisa dibuka dari perangkat mana saja.</div>
+    </div>
+
+    <footer style="text-align:center;margin-top:26px;padding-top:14px;border-top:1px solid #2a3650;font-size:13px;color:var(--ink-dim);">
+      &copy; Copyright by Pak GuruAI
+    </footer>
   </div>
 </div>
 
@@ -451,7 +483,8 @@ var selectedRegionId = null;
 // Guru: sebelum meng-upload/membagikan file ini, tempel URL Web App Anda
 // di antara tanda kutip di bawah ini. Kalau diisi, siswa yang membuka link
 // TIDAK akan diminta menempel URL sendiri lagi.
-var DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwrLXshrlC_QP2vmPtcVv1yYOZ_gTfJc8TVcFdSOHihlOFIXmTH0M_IMuief8_OH877/exec';
+var DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzbrUTyYAAPBNT6twqTkrEm9o2ipsjg0b6vzwl8r4C6K8VBxEjZD1EpZ-STPXpOaFG0lA/exec
+';
 
 var API_URL = '';
 var ROLE = 'siswa';
@@ -507,9 +540,23 @@ function initApiUrl(){
   } else {
     document.getElementById('setupOverlay').classList.add('hidden');
     document.getElementById('gameRoot').classList.remove('hidden');
+    initStartGate();
     loadState();
   }
 }
+
+/* ---------- Start gate (sembunyikan daftar quest sebelum mulai) ---------- */
+
+function initStartGate(){
+  var started = sessionStorage.getItem('petualangan-started') === '1';
+  document.getElementById('startGate').classList.toggle('hidden', started);
+  document.getElementById('playArea').classList.toggle('hidden', !started);
+}
+
+document.getElementById('startBtn').addEventListener('click', function(){
+  sessionStorage.setItem('petualangan-started', '1');
+  initStartGate();
+});
 
 document.getElementById('saveApiUrlBtn').addEventListener('click', function(){
   var val = document.getElementById('apiUrlInput').value.trim();
@@ -541,7 +588,7 @@ function loadState(){
     state = data;
     render();
   }).catch(function(){
-    showToast('Tidak bisa terhubung ke Google Sheets. Cek URL Web App.', true);
+    showToast('Tidak bisa terhubung ke Database. Cek URL Web App.', true);
   });
 }
 
@@ -560,7 +607,8 @@ function showToast(msg, isBad){
 
 function render(){
   document.getElementById('classNameInput').value = state.className || '';
-  document.getElementById('guruName').textContent = state.className ? ('Wali ' + state.className) : 'Pak/Bu Guru';
+  document.getElementById('guruName').textContent = state.className ? ('Wali ' + state.className) : 'Pak Guru';
+  renderClassNameHistory();
 
   var totalXp = totalClassXp();
   var lv = levelFromXp(totalXp);
@@ -575,9 +623,45 @@ function render(){
   renderMap();
 }
 
+// Dropdown nama kelas yang pernah disimpan di Database, supaya bisa
+// dipanggil lagi kapan pun tanpa mengetik ulang.
+function renderClassNameHistory(){
+  var select = document.getElementById('classNameHistorySelect');
+  var history = state.classNameHistory || [];
+  if(history.length === 0){
+    select.innerHTML = '<option value="">Belum ada riwayat kelas</option>';
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  select.innerHTML = '<option value="">&#128193; Riwayat nama kelas...</option>' +
+    history.map(function(nama){
+      return '<option value="'+escapeHtml(nama)+'"'+(nama===state.className?' selected':'')+'>'+escapeHtml(nama)+'</option>';
+    }).join('');
+}
+
+document.getElementById('classNameHistorySelect').addEventListener('change', function(e){
+  var val = e.target.value;
+  if(!val) return;
+  document.getElementById('classNameInput').value = val;
+  document.getElementById('guruName').textContent = 'Wali ' + val;
+  apiPost('setClassName', { nama: val }).then(function(data){
+    if(data.error){ showToast(data.error, true); return; }
+    state = data; render();
+  });
+});
+
 /* ---------- Siapa kamu (pilih diri sendiri) ---------- */
 
 function getSelfId(){ return localStorage.getItem(SELF_KEY) || ''; }
+
+function isHelpModeOn(studentId){
+  return localStorage.getItem('petualangan-help-' + studentId) !== '0'; // aktif secara default
+}
+function toggleHelpMode(studentId){
+  var next = isHelpModeOn(studentId) ? '0' : '1';
+  localStorage.setItem('petualangan-help-' + studentId, next);
+}
 
 function renderSelfBar(){
   var bar = document.getElementById('selfBar');
@@ -586,13 +670,19 @@ function renderSelfBar(){
 
   if(self){
     var region = regionForLevel(levelFromXp(self.xp));
+    var helpOn = isHelpModeOn(self.id);
     bar.innerHTML =
-      '<div class="self-info">Kamu: <b>'+escapeHtml(self.nama)+'</b> &middot; LV.'+levelFromXp(self.xp)+
+      '<div class="self-info">Kamu: <b>'+escapeHtml(self.nama)+'</b> &middot; LV.'+levelFromXp(self.xp)+' &middot; '+self.xp+' XP'+
       ' &middot; sedang di <b>'+region.ikon+' '+region.nama+'</b></div>'+
+      '<button class="ghost help-toggle'+(helpOn?' on':'')+'" id="helpToggleBtn">&#128161; Mode Bantuan: '+(helpOn?'AKTIF':'NONAKTIF')+'</button>'+
       '<button class="ghost" id="gantiSelfBtn">Bukan aku, ganti</button>';
     document.getElementById('gantiSelfBtn').addEventListener('click', function(){
       localStorage.removeItem(SELF_KEY);
       render();
+    });
+    document.getElementById('helpToggleBtn').addEventListener('click', function(){
+      toggleHelpMode(self.id);
+      renderSelfBar();
     });
   } else {
     var options = state.students.map(function(s){ return '<option value="'+s.id+'">'+escapeHtml(s.nama)+'</option>'; }).join('');
@@ -746,8 +836,9 @@ function renderSiswa(){
     card.innerHTML =
       '<div class="siswa-avatar">'+AVATARS[i % AVATARS.length]+'</div>'+
       '<div class="siswa-info">'+
-        '<div class="siswa-name-row"><span class="siswa-name">'+escapeHtml(s.nama)+'</span><span class="siswa-lv">LV.'+lv+'</span></div>'+
+        '<div class="siswa-name-row"><span class="siswa-name">'+escapeHtml(s.nama)+'</span><span class="siswa-lv">LV.'+lv+' &middot; '+s.xp+' XP</span></div>'+
         '<div class="siswa-bar"><div class="siswa-bar-fill" style="width:'+into+'%"></div></div>'+
+        '<div style="font-size:11px;color:var(--ink-dim);margin-top:2px;">'+into+'/100 XP menuju LV.'+(lv+1)+'</div>'+
       '</div>'+
       '<button class="siswa-del guru-only" data-id="'+s.id+'" title="Hapus siswa">\u2715</button>';
     list.appendChild(card);
@@ -776,6 +867,8 @@ function openChallengeModal(questId, studentId){
   var student = state.students.find(function(s){ return s.id === studentId; });
   if(!quest || !student) return;
 
+  var bisaBantuan = !!quest.petunjuk && isHelpModeOn(studentId);
+
   var overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML =
@@ -784,7 +877,9 @@ function openChallengeModal(questId, studentId){
       '<div style="font-size:14px;color:var(--ink-dim);">'+escapeHtml(student.nama)+' &middot; hadiah +'+quest.xp+' XP</div>'+
       (quest.pertanyaan
         ? '<div class="modal-question">'+escapeHtml(quest.pertanyaan)+'</div>'+
-          '<input type="text" id="modalAnswerInput" placeholder="Ketik jawaban di sini" />'
+          '<input type="text" id="modalAnswerInput" placeholder="Ketik jawaban di sini" />'+
+          (bisaBantuan ? '<button class="ghost" id="modalHintBtn" style="margin-top:8px;font-size:13px;">&#128161; Minta Bantuan</button>' : '')+
+          '<div class="hint-box" id="modalHintBox"></div>'
         : '<div class="modal-question">Quest ini tidak punya tantangan pertanyaan. Selesaikan langsung?</div>')+
       '<div class="modal-feedback" id="modalFeedback"></div>'+
       '<div class="modal-actions">'+
@@ -796,6 +891,16 @@ function openChallengeModal(questId, studentId){
 
   var input = document.getElementById('modalAnswerInput');
   if(input) input.focus();
+
+  var hintBtn = document.getElementById('modalHintBtn');
+  if(hintBtn){
+    hintBtn.addEventListener('click', function(){
+      var box = document.getElementById('modalHintBox');
+      box.textContent = '\ud83d\udca1 ' + quest.petunjuk;
+      box.classList.add('show');
+      hintBtn.disabled = true;
+    });
+  }
 
   document.getElementById('modalCancelBtn').addEventListener('click', function(){
     overlay.remove();
@@ -843,7 +948,7 @@ function openChallengeModal(questId, studentId){
 var classNameTimer = null;
 document.getElementById('classNameInput').addEventListener('input', function(e){
   var val = e.target.value;
-  document.getElementById('guruName').textContent = val ? ('Wali ' + val) : 'Pak/Bu Guru';
+  document.getElementById('guruName').textContent = val ? ('Wali ' + val) : 'Pak Guru';
   clearTimeout(classNameTimer);
   classNameTimer = setTimeout(function(){
     apiPost('setClassName', { nama: val });
@@ -856,6 +961,7 @@ document.getElementById('addQuestBtn').addEventListener('click', function(){
   var xpEl = document.getElementById('questXp');
   var qEl = document.getElementById('questQuestion');
   var aEl = document.getElementById('questAnswer');
+  var hEl = document.getElementById('questHint');
 
   var judul = titleEl.value.trim();
   if(!judul){ showToast('Isi judul quest dulu!', true); return; }
@@ -866,10 +972,11 @@ document.getElementById('addQuestBtn').addEventListener('click', function(){
     tipe: typeEl.value,
     xp: xp,
     pertanyaan: qEl.value.trim(),
-    jawaban: aEl.value.trim()
+    jawaban: aEl.value.trim(),
+    petunjuk: hEl.value.trim()
   }).then(function(data){
     if(data.error){ showToast(data.error, true); return; }
-    titleEl.value = ''; qEl.value = ''; aEl.value = '';
+    titleEl.value = ''; qEl.value = ''; aEl.value = ''; hEl.value = '';
     state = data; render();
   });
 });
