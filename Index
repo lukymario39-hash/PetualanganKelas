@@ -483,8 +483,7 @@ var selectedRegionId = null;
 // Guru: sebelum meng-upload/membagikan file ini, tempel URL Web App Anda
 // di antara tanda kutip di bawah ini. Kalau diisi, siswa yang membuka link
 // TIDAK akan diminta menempel URL sendiri lagi.
-var DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzbrUTyYAAPBNT6twqTkrEm9o2ipsjg0b6vzwl8r4C6K8VBxEjZD1EpZ-STPXpOaFG0lA/exec
-';
+var DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzbrUTyYAAPBNT6twqTkrEm9o2ipsjg0b6vzwl8r4C6K8VBxEjZD1EpZ-STPXpOaFG0lA/exec';
 
 var API_URL = '';
 var ROLE = 'siswa';
